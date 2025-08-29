@@ -4,17 +4,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-`Entryhall` is a user profile, resource management and gateway application for a large AI supercomputer at our university. This resource will be available to all university faculty and staff, as well as other universities in the state. Users from approximately a dozen universities will be able to sign up using their university email addresses.
+`Woerk` is a user profile, project, resource and data management and resource allocation tool that serves as a self service management and gateway application for a large AI supercomputer at our university. `Woerk` will be installed in a cloud instance (AWS) and users from inside the university (Faculty, Staff) as well as external users from other universities can connect to an easy to use web ui. In addition, software agents can connect to this platform to send and retrieve information and to retrieve commands. Software agents can use a compination of REST/API and web sockets. The agents are often written in Python or Bash
 
 ## Development stack
 
-## Application Structure
+Please use this stack to generate code, We are using a Ubuntu 24.04 workstation With Node.js 24.0 and a local Postgres 16.9 installed (JSONB supported)
+
+- TypeScript end to end:
+  - Strong typing across API contracts reduces regressions as we add features quickly.
+  - Shared type definitions between frontend and backend minimize drift.
+- Next.js (App Router) + React:
+  - Production-grade SSR/SSG, great DX, huge ecosystem, fast UI delivery.
+  - Easy integration with Auth.js and edge caching if needed.
+- NestJS (Node 20, Fastify adapter), Build REST APIs, GraphQL APIs, Queues, :
+  - Opinionated structure, DI, modules → maintainable as the app grows.
+  - First-class docs (Swagger), guards/interceptors for auth/rate-limits, simple testing.
+- PostgreSQL + Prisma:
+  - Strong relational model (users, orgs, projects, roles/permissions, tasks, audit logs).
+  - Prisma = fast migrations, excellent DX, typed queries, JSONB support for flexible data.
+- pg-boss:
+  -  message queue, backround jobs
+- auth.js (NextAuth):
+  -  Google/GitHub/Microsoft/SAML/OIDC with minimal boilerplate; sessions stored in Postgres.
+-  Python for software agents 
+  - Asynchronous Framework: asyncio (standard library)
+  - Command Execution: subprocess (standard library, with asyncio wrappers)
+  - Retries/Backoff: tenacity
+  - Configuration: python-dotenv (for .env files), YAML or JSON for complex configs.
+  - Logging: logging (standard library)
+  - Systemd Integration: Standard I/O for logs, sdnotify (optional but good) for service status.
+
+## Business Requirements 
+
+- check out the REQUIRED.md doc 
+
+## Database structure 
+
+- check out the postgres database model at DBMODEL.md
+
+## Application UI Structure
 
 ### Tab 1: User Account Management
 
 **User Registration & Authentication:**
 
-- Users sign up with their university email address
+- Users sign up with their university email address, enter .edu emil address -> next -> check if account already exists, prompt for auth option (password for external users, azure login for internal -> if account does not exist send link via email to setup new account or, if university is integrated redirect authentication to university)
 - Email verification required, email needs to e verified at regular intervals configured by administrator
 - some university email domains will be integrated via federation (for example oregonstate.edu). Needs to be configurable by admin 
 - 
