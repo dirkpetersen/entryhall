@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AllocationModel {
+  subscription
+  condo
+}
+
+enum StorageSubtype {
+  posix
+  s3_like
+  database
+}
+
+enum UserRole {
+  staff
+  professional_faculty
+  faculty
+}
+
+enum LinkedAccountType {
+  google
+  github
+  orcid
+  linkedin
+}
+
+model User {
+  id                  Int                     @id @default(autoincrement())
+  username            String                  @unique
+  fullName            String                  @map("full_name")
+  email               String                  @unique
+  emailVerified       DateTime?               @map("email_verified")
+  passwordHash        String?                 @map("password_hash")
+  title               String?
+  position            String?
+  role                UserRole?
+  university          String?
+  department          String?
+  defaultIndex        String?                 @map("default_index")
+  defaultActivityCode String?                 @map("default_activity_code")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+  defaultProjectId    Int?                    @map("default_project_id")
+  defaultProject      Project?                @relation("DefaultProject", fields: [defaultProjectId], references: [id])
+  
+  ownedProjects             Project[]               @relation("ProjectOwner")
+  managedProjects           ProjectResourceManager[]
+  dataShares                DataShare[]             @relation("DataSteward")
+  defaultStewardProjects    Project[]               @relation("DefaultDataSteward")
+  linkedAccounts            LinkedAccount[]
+  sessions                  Session[]
+  accounts                  Account[]
+
+  @@map("users")
+}
+
+model LinkedAccount {
+  id            Int                @id @default(autoincrement())
+  userId        Int                @map("user_id")
+  accountType   LinkedAccountType  @map("account_type")
+  email         String?
+  externalId    String             @map("external_id")
+  externalNumId BigInt?            @map("external_num_id")
+  metadata      Json?
+  createdAt     DateTime           @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, accountType])
+  @@map("linked_accounts")
+}
+
+model SecurityGroup {
+  id                 Int         @id @default(autoincrement())
+  groupName          String      @unique @map("group_name")
+  externalSystemId   String?     @unique @map("external_system_id")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  
+  dataShares         DataShare[]
+  defaultForProjects Project[]
+
+  @@map("security_groups")
+}
+
+model ResourceType {
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
+  unit           String
+  isStorageType  Boolean      @default(false) @map("is_storage_type")
+  
+  allocations    Allocation[]
+  resourceShares ProjectResourceShare[]
+
+  @@map("resource_types")
+}
+
+model Project {
+  id                       Int       @id @default(autoincrement())
+  woerkId                  String    @unique @map("woerk_id")
+  shortName                String    @map("short_name")
+  description              String?
+  piOwnerId                Int       @map("pi_owner_id")
+  billingDetails           Json?     @map("billing_details")
+  defaultDataStewardId     Int?      @map("default_data_steward_id")
+  defaultSecurityGroupId   Int?      @map("default_security_group_id")
+  isGrantProject           Boolean   @default(false) @map("is_grant_project")
+  grantMetadata            Json?     @map("grant_metadata")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  
+  piOwner                  User                     @relation("ProjectOwner", fields: [piOwnerId], references: [id])
+  defaultDataSteward       User?                    @relation("DefaultDataSteward", fields: [defaultDataStewardId], references: [id])
+  defaultSecurityGroup     SecurityGroup?           @relation(fields: [defaultSecurityGroupId], references: [id])
+  
+  allocations              Allocation[]
+  dataShares               DataShare[]
+  resourceManagers         ProjectResourceManager[]
+  sharedResourcesFrom      ProjectResourceShare[]   @relation("SourceProject")
+  sharedResourcesTo        ProjectResourceShare[]   @relation("RecipientProject")
+  defaultForUsers          User[]                   @relation("DefaultProject")
+
+  @@unique([piOwnerId, shortName])
+  @@index([piOwnerId])
+  @@map("projects")
+}
+
+model Allocation {
+  id               Int             @id @default(autoincrement())
+  projectId        Int             @map("project_id")
+  resourceTypeId   Int             @map("resource_type_id")
+  allocationModel  AllocationModel @map("allocation_model")
+  quantity         Decimal         @db.Decimal(18, 4)
+  periodStart      DateTime        @map("period_start")
+  periodEnd        DateTime        @map("period_end")
+  
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resourceType     ResourceType    @relation(fields: [resourceTypeId], references: [id])
+  dataShare        DataShare?
+
+  @@index([projectId])
+  @@map("allocations")
+}
+
+model DataShare {
+  id                  Int             @id @default(autoincrement())
+  name                String
+  projectId           Int             @map("project_id")
+  sourceAllocationId  Int             @unique @map("source_allocation_id")
+  storageSubtype      StorageSubtype  @map("storage_subtype")
+  dataStewardId       Int?            @map("data_steward_id")
+  securityGroupId     Int             @map("security_group_id")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  
+  project             Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceAllocation    Allocation      @relation(fields: [sourceAllocationId], references: [id])
+  dataSteward         User?           @relation("DataSteward", fields: [dataStewardId], references: [id])
+  securityGroup       SecurityGroup   @relation(fields: [securityGroupId], references: [id])
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("data_shares")
+}
+
+model ProjectResourceManager {
+  projectId Int @map("project_id")
+  userId    Int @map("user_id")
+  
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_resource_managers")
+}
+
+model ProjectResourceShare {
+  id                  Int           @id @default(autoincrement())
+  sourceProjectId     Int           @map("source_project_id")
+  recipientProjectId  Int           @map("recipient_project_id")
+  resourceTypeId      Int?          @map("resource_type_id")
+  sharePercentage     Decimal       @map("share_percentage") @db.Decimal(5, 2)
+  
+  sourceProject       Project       @relation("SourceProject", fields: [sourceProjectId], references: [id], onDelete: Cascade)
+  recipientProject    Project       @relation("RecipientProject", fields: [recipientProjectId], references: [id], onDelete: Cascade)
+  resourceType        ResourceType? @relation(fields: [resourceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceProjectId, recipientProjectId, resourceTypeId])
+  @@index([sourceProjectId])
+  @@index([recipientProjectId])
+  @@map("project_resource_shares")
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int     @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       Int      @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

@@ -1,46 +1,46 @@
-# CLAUDE.md for a Supercomputer Resource Management System
+# CLAUDE.md - Woerk Supercomputer Resource Management System
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. The application is a very easy to use single page app with multiple tabs. It will be entirely vibe coded using Claude code.
+Quick reference guide for Claude Code when working with the Woerk application.
 
-## Overview
+## Project Overview
 
-`Woerk` is a user profile, project, resource and data management and resource allocation tool that serves as a self service management and gateway application for a large AI supercomputer at our university. `Woerk` will be installed in a cloud instance (AWS) and users from inside the university (Faculty, Staff) as well as external users from other universities can connect to an easy to use web ui. In addition, software agents can connect to this platform to send and retrieve information and to retrieve commands. Software agents can use a compination of REST/API and web sockets. The agents are often written in Python or Bash
+**Woerk** is a comprehensive resource management platform for university supercomputer facilities, providing:
+- Self-service user and project management
+- Resource allocation and tracking
+- Multi-university federation support
+- Integration with research infrastructure (grants.gov, LDAP, GitHub)
+- Web-based terminal and file management
 
-## Development stack
+## Documentation Structure
 
-Please use this stack to generate code, We are using a Ubuntu 24.04 workstation With Node.js 24.0 and a local Postgres 16.9 installed (JSONB supported)
+### Core Documentation
+- **[TECHNICAL.md](./TECHNICAL.md)** - Technology stack, architecture, compatibility notes
+- **[API-SPEC.md](./API-SPEC.md)** - Complete API documentation and endpoints
+- **[SETUP.md](./SETUP.md)** - Installation and deployment instructions
+- **[WORKFLOWS.md](./WORKFLOWS.md)** - User flows and business logic
 
-- TypeScript end to end:
-  - Strong typing across API contracts reduces regressions as we add features quickly.
-  - Shared type definitions between frontend and backend minimize drift.
-- Next.js (App Router) + React:
-  - Production-grade SSR/SSG, great DX, huge ecosystem, fast UI delivery.
-  - Easy integration with Auth.js and edge caching if needed.
-- NestJS (Node 20, Fastify adapter), Build REST APIs, GraphQL APIs, Queues, :
-  - Opinionated structure, DI, modules → maintainable as the app grows.
-  - First-class docs (Swagger), guards/interceptors for auth/rate-limits, simple testing.
-- PostgreSQL + Prisma:
-  - Strong relational model (users, orgs, projects, roles/permissions, tasks, audit logs).
-  - Prisma = fast migrations, excellent DX, typed queries, JSONB support for flexible data.
-- pg-boss:
-  -  message queue, backround jobs
-- auth.js (NextAuth):
-  -  Google/GitHub/Microsoft/SAML/OIDC with minimal boilerplate; sessions stored in Postgres.
--  Python for software agents 
-  - Asynchronous Framework: asyncio (standard library)
-  - Command Execution: subprocess (standard library, with asyncio wrappers)
-  - Retries/Backoff: tenacity
-  - Configuration: python-dotenv (for .env files), YAML or JSON for complex configs.
-  - Logging: logging (standard library)
-  - Systemd Integration: Standard I/O for logs, sdnotify (optional but good) for service status.
+### Requirements & Design
+- **[REQUIRED.md](./REQUIRED.md)** - Business requirements and features
+- **[DBMODEL.md](./DBMODEL.md)** - Database schema and relationships
 
-## Business Requirements 
+## Quick Reference
 
-- check out the REQUIRED.md doc 
+### Technology Stack
+- **Frontend**: Next.js 15.5.2, TypeScript, Tailwind CSS 3.4.17 (NOT v4)
+- **Backend**: NestJS with Express (NOT Fastify), Prisma ORM
+- **Database**: PostgreSQL 16.9 with JSONB support
+- **Authentication**: JWT with Passport
+- **Terminal**: xterm.js 5.5.0
+- **Queue**: pg-boss (planned)
 
-## Database structure 
+### Port Configuration
+- **Development**: Frontend 3020, Backend 3021
+- **Production**: Frontend 3010, Backend 3011
 
-- check out the postgres database model at DBMODEL.md
+### Critical Compatibility Notes
+⚠️ **MUST use Tailwind CSS v3.x** - Next.js 15 + Tailwind v4 causes build failures
+⚠️ **Use Express adapter** for NestJS - Fastify has WebSocket issues
+⚠️ **Dynamic imports** for xterm.js - Avoid SSR conflicts
 
 ## Application UI Structure
 
@@ -145,5 +145,153 @@ Default billing information: for home university (e.g. oregonstate.edu) these ne
 
 - by default empty tab unless users have linked their github account in Tab 1, point users to tab 1
 - searchable pull down field that allows you to either pick or enter a github https://url
+
+## Technical Implementation Notes & Lessons Learned
+
+### Port Configuration (CRITICAL)
+- **Development Ports**: Frontend 3021, Backend 3020
+- **Production Ports**: Frontend 3011, Backend 3010  
+- **Default Ports**: Frontend 3011, Backend 3010 (in .env files)
+- Always use different port ranges to avoid conflicts with common dev tools
+
+### Database Setup
+1. Create database: `sudo -u postgres psql -c "CREATE DATABASE woerk_db;"`
+2. Set postgres password: `sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"`
+3. Use connection string: `postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public`
+4. Run migrations: `npx prisma migrate dev --name init`
+
+### Next.js 15 + Tailwind CSS Issues & Solutions
+**CRITICAL**: Next.js 15 installs Tailwind CSS v4 (beta) by default which breaks standard utility classes.
+
+**Solution**:
+1. Uninstall Tailwind v4: `npm uninstall tailwindcss @tailwindcss/postcss`
+2. Install Tailwind v3: `npm install tailwindcss@3 autoprefixer postcss`
+3. Use standard PostCSS config:
+```js
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
+
+### Authentication Issues
+- NextAuth v5 (beta) has compatibility issues with Next.js 15
+- For development, use simple credential-based auth or mock auth
+- OAuth providers require proper client IDs or will cause build failures
+- Use simplified auth route handlers for Next.js 15 compatibility
+
+### xterm.js Integration
+- Must be dynamically imported client-side only to avoid SSR issues
+- Use `@xterm/xterm` and `@xterm/addon-fit` (not deprecated `xterm` package)
+- Wrap terminal initialization in `isClient` check
+- Use null checks for all xterm method calls
+
+### TypeScript Configuration
+- Set `"strict": true` in tsconfig.json
+- Avoid `any` types - use proper interfaces
+- Use `React.forwardRef` with proper typing for components
+- Import React hooks with proper dependency arrays
+
+### Build & Development Scripts
+Create these scripts for consistent development:
+
+**start-dev.sh**: Development with ports 3020/3021
+**start-prod.sh**: Production with ports 3010/3011  
+**restart.sh**: Kill processes and restart with updated code
+
+### Component Library Pattern
+Use shadcn/ui pattern:
+- Components in `components/ui/` 
+- Page-specific components in `components/tabs/`
+- Shared utilities in `lib/utils.ts`
+- CSS variables in `globals.css` with proper HSL values
+
+### Database Schema Notes
+- Use `@map()` for snake_case database columns
+- Include NextAuth models (Account, Session, VerificationToken)
+- Create indexes for foreign keys and query performance
+- Use proper Prisma relations with cascade deletes
+
+### Prisma Setup
+- Backend: Standard Prisma setup with PrismaService
+- Frontend: Copy schema and run `npx prisma generate` for NextAuth
+- Both need same DATABASE_URL in .env files
+- Use global PrismaService module in NestJS
+
+### Environment Variables
+Must set these for proper operation:
+```bash
+# Backend (.env)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public"
+PORT=3010
+JWT_SECRET="your-secret-here"
+CORS_ORIGIN="http://localhost:3011,http://localhost:3021"
+
+# Frontend (.env)  
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public"
+NEXTAUTH_URL=http://localhost:3011
+NEXTAUTH_SECRET="your-secret-here"
+NEXT_PUBLIC_API_URL=http://localhost:3010
+NEXT_PUBLIC_WS_URL=ws://localhost:3010
+```
+
+### Common Build Failures & Solutions
+1. **"@prisma/client did not initialize"**: Run `npx prisma generate` in both frontend and backend
+2. **"border-border unknown utility"**: Tailwind v4 incompatibility - downgrade to v3
+3. **"asChild not found"**: Use standard JSX patterns, not advanced component composition
+4. **"self is not defined"**: xterm.js SSR issue - use dynamic imports with client-side checks
+5. **Port conflicts**: Always kill existing processes before starting new ones
+
+### Testing Commands
+- Build frontend: `npm run build` (must succeed without CSS errors)
+- Test backend: `curl http://localhost:3010` should return "Hello World!"  
+- Test API docs: `curl http://localhost:3010/api` should return Swagger UI
+- Test database: `psql -U postgres -h localhost woerk_db -c "SELECT * FROM users LIMIT 1;"`
+
+### Project Structure Created
+```
+├── backend/
+│   ├── src/
+│   │   ├── auth/ (JWT auth with passport)
+│   │   ├── projects/ (CRUD operations)  
+│   │   ├── prisma/ (database service)
+│   │   └── main.ts (Fastify setup)
+│   └── prisma/schema.prisma
+├── frontend/
+│   ├── app/
+│   │   ├── api/auth/[...nextauth]/ (auth routes)
+│   │   └── page.tsx (main app)
+│   ├── components/
+│   │   ├── ui/ (button, input, card, label)
+│   │   ├── tabs/ (user-account, resources, terminal, github)
+│   │   └── main-tabs.tsx
+│   └── lib/utils.ts
+├── start-dev.sh (development: ports 3020/3021)
+├── start-prod.sh (production: ports 3010/3011)  
+└── restart.sh (kill and restart)
+```
+
+### Dependencies That Work Together
+```json
+{
+  "tailwindcss": "^3.4.17",
+  "@xterm/xterm": "^5.5.0", 
+  "@xterm/addon-fit": "^0.10.0",
+  "@radix-ui/react-tabs": "^1.1.13",
+  "next": "15.5.2",
+  "@nestjs/platform-express": "^10.0.0"
+}
+```
+Note: Avoid Fastify adapter - causes port binding issues. Use Express.
+
+### Key Implementation Patterns
+- Tab-based SPA with Radix UI Tabs
+- Each tab is a separate component in `components/tabs/`
+- Use consistent Card/Button/Input UI components  
+- Client-side state management with React hooks
+- API calls to backend at `NEXT_PUBLIC_API_URL`
+- Woerk ID generation: 2 letters + hyphen + 2 alphanumeric (e.g., "AB-1C")
 
 
