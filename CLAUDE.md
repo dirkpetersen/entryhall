@@ -14,14 +14,14 @@ Quick reference guide for Claude Code when working with the Woerk application.
 ## Documentation Structure
 
 ### Core Documentation
-- **[TECHNICAL.md](./TECHNICAL.md)** - Technology stack, architecture, compatibility notes
-- **[API-SPEC.md](./API-SPEC.md)** - Complete API documentation and endpoints
-- **[SETUP.md](./SETUP.md)** - Installation and deployment instructions
-- **[WORKFLOWS.md](./WORKFLOWS.md)** - User flows and business logic
+- **[TECHNICAL.md](./docs/TECHNICAL.md)** - Technology stack, architecture, compatibility notes
+- **[API-SPEC.md](./docs/API-SPEC.md)** - Complete API documentation and endpoints
+- **[SETUP.md](./docs/SETUP.md)** - Installation and deployment instructions
+- **[WORKFLOWS.md](./docs/WORKFLOWS.md)** - User flows and business logic
 
 ### Requirements & Design
-- **[REQUIRED.md](./REQUIRED.md)** - Business requirements and features
-- **[DBMODEL.md](./DBMODEL.md)** - Database schema and relationships
+- **[REQUIRED.md](./docs/REQUIRED.md)** - Business requirements and features
+- **[DBMODEL.md](./docs/DBMODEL.md)** - Database schema and relationships
 
 ## Quick Reference
 
