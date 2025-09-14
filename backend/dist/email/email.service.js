@@ -22,14 +22,23 @@ let EmailService = EmailService_1 = class EmailService {
     constructor(configService) {
         this.configService = configService;
         const awsRegion = this.configService.get('AWS_REGION', 'us-west-2');
+        const awsProfile = this.configService.get('AWS_PROFILE');
         const awsAccessKey = this.configService.get('AWS_ACCESS_KEY_ID');
         const awsSecretKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
         const sesConfig = { region: awsRegion };
-        if (awsAccessKey && awsSecretKey) {
+        if (awsProfile) {
+            process.env.AWS_PROFILE = awsProfile;
+            this.logger.log(`Using AWS profile: ${awsProfile}`);
+        }
+        else if (awsAccessKey && awsSecretKey) {
             sesConfig.credentials = {
                 accessKeyId: awsAccessKey,
                 secretAccessKey: awsSecretKey,
             };
+            this.logger.log('Using explicit AWS credentials');
+        }
+        else {
+            this.logger.log('Using default AWS CLI credentials');
         }
         this.sesClient = new client_ses_1.SESClient(sesConfig);
         this.fromEmail = this.configService.get('EMAIL_FROM', 'woerk@example.edu');

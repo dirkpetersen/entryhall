@@ -76,7 +76,7 @@ cd backend
 echo "Building backend..."
 npm run build
 echo "Starting backend on port 3010..."
-PORT=3010 node dist/main.js &
+AWS_PROFILE=sendmail PORT=3010 node dist/main.js &
 BACKEND_PID=$!
 
 # Build and start frontend on port 3011

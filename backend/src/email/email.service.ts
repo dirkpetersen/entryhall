@@ -16,18 +16,27 @@ export class EmailService {
 
   constructor(private readonly configService: ConfigService) {
     const awsRegion = this.configService.get('AWS_REGION', 'us-west-2');
+    const awsProfile = this.configService.get('AWS_PROFILE');
     const awsAccessKey = this.configService.get('AWS_ACCESS_KEY_ID');
     const awsSecretKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
 
     // Initialize AWS SES client
     const sesConfig: any = { region: awsRegion };
     
-    // Only set credentials if they are provided, otherwise use AWS CLI credentials
-    if (awsAccessKey && awsSecretKey) {
+    // Set AWS profile if specified (uses AWS CLI credentials)
+    if (awsProfile) {
+      process.env.AWS_PROFILE = awsProfile;
+      this.logger.log(`Using AWS profile: ${awsProfile}`);
+    }
+    // Otherwise use explicit credentials if provided
+    else if (awsAccessKey && awsSecretKey) {
       sesConfig.credentials = {
         accessKeyId: awsAccessKey,
         secretAccessKey: awsSecretKey,
       };
+      this.logger.log('Using explicit AWS credentials');
+    } else {
+      this.logger.log('Using default AWS CLI credentials');
     }
     
     this.sesClient = new SESClient(sesConfig);

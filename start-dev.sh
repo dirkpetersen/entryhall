@@ -76,7 +76,7 @@ cd backend
 echo "Building backend..."
 npm run build
 echo "Starting backend on port 3020..."
-PORT=3020 CORS_ORIGIN="http://localhost:3021" node dist/main.js &
+AWS_PROFILE=sendmail PORT=3020 CORS_ORIGIN="http://localhost:3021" node dist/main.js &
 BACKEND_PID=$!
 
 # Start frontend on port 3021
