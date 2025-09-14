@@ -154,9 +154,16 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
 
   const handleProviderSelect = async (provider: string): Promise<void> => {
     try {
-      // Redirect to OAuth provider
-      const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/${provider}?email=${encodeURIComponent(authState.email)}`
-      window.location.href = authUrl
+      // Get OAuth URL from backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/${provider}?email=${encodeURIComponent(authState.email)}`)
+      const data = await response.json()
+      
+      if (response.ok && data.url) {
+        // Redirect to the OAuth provider URL
+        window.location.href = data.url
+      } else {
+        throw new Error(data.message || 'Failed to get OAuth URL')
+      }
     } catch (error) {
       console.error('Provider authentication failed:', error)
       throw error
