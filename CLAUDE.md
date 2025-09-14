@@ -5,168 +5,187 @@ Quick reference guide for Claude Code when working with the Woerk application.
 ## Project Overview
 
 **Woerk** is a comprehensive resource management platform for AI supercomputer facilities, providing:
-- Self-service user and project management
-- Resource allocation and tracking
-- Multi-university light federation support
-- Integration with research infrastructure (grants.gov, LDAP, GitHub)
-- Web-based terminal and file management
+
+-   User account management.
+-   Self-service user and project management
+-   Resource allocation and tracking
+-   Multi-university light federation support
+-   Integration with research infrastructure (grants.gov, LDAP, GitHub)
+-   Web-based terminal and file management
 
 ## Documentation Structure
 
 ### Core Documentation
-- **[TECHNICAL.md](./docs/TECHNICAL.md)** - Technology stack, architecture, compatibility notes
-- **[API-SPEC.md](./docs/API-SPEC.md)** - Complete API documentation and endpoints
-- **[SETUP.md](./docs/SETUP.md)** - Installation and deployment instructions
-- **[WORKFLOWS.md](./docs/WORKFLOWS.md)** - User flows and business logic
+
+-   [TECHNICAL.md](./docs/TECHNICAL.md) - Technology stack, architecture, compatibility notes
+-   [API-SPEC.md](./docs/API-SPEC.md) - Complete API documentation and endpoints
+-   [SETUP.md](./docs/SETUP.md) - Installation and deployment instructions
+-   [WORKFLOWS.md](./docs/WORKFLOWS.md) - User flows and business logic
 
 ### Requirements & Design
-- **[REQUIRED.md](./docs/REQUIRED.md)** - Business requirements and features
-- **[DBMODEL.md](./docs/DBMODEL.md)** - Database schema and relationships
+
+-   [REQUIRED.md](./docs/REQUIRED.md) - Business requirements and features
+-   [DBMODEL.md](./docs/DBMODEL.md) - Database schema and relationships
 
 ## Quick Reference
 
 ### Technology Stack
-- **Frontend**: Next.js 15.5.2, TypeScript, Tailwind CSS 3.4.17 (NOT v4)
-- **Backend**: NestJS with Express (NOT Fastify), Prisma ORM
-- **Database**: PostgreSQL 16.9 with JSONB support
-- **Authentication**: JWT with Passport
-- **Terminal**: xterm.js 5.5.0
-- **Queue**: pg-boss (planned)
+
+-   **Frontend**: Next.js 15.5.2, TypeScript, Tailwind CSS 3.4.17 (NOT v4)
+-   **Backend**: NestJS with Express (NOT Fastify), Prisma ORM
+-   **Database**: PostgreSQL 16.9 with JSONB support
+-   **Authentication**: JWT with Passport
+-   **Terminal**: xterm.js 5.5.0
+-   **Queue**: pg-boss (planned)
+-   **Emailer**: AWS SES (working with pg-boss
 
 ### Port Configuration
-- **Development**: Frontend 3020, Backend 3021
-- **Production**: Frontend 3010, Backend 3011
+
+-   **Development**: Frontend 3020, Backend 3021
+-   **Production**: Frontend 3010, Backend 3011
 
 ### Critical Compatibility Notes
-⚠️ **MUST use Tailwind CSS v3.x** - Next.js 15 + Tailwind v4 causes build failures
-⚠️ **Use Express adapter** for NestJS - Fastify has WebSocket issues
-⚠️ **Dynamic imports** for xterm.js - Avoid SSR conflicts
+
+-   **MUST use Tailwind CSS v3.x - Next.js 15 + Tailwind v4 causes build failures**
+-   **Use Express adapter for NestJS - Fastify has WebSocket issues**
+-   **Dynamic imports for xterm.js - Avoid SSR conflicts**
 
 ## Application UI Structure
+
+The application has multiple tabs that address different topics. Before the user can see any tabs, they need to log in or register. The only thing that they should be able to see first is a short description of what Woerk is all about and a field where they enter their primary e-mail address of their primary organization or employer. Then they click a button with the caption “Next”. If the E-mail address does not end in “.edu” the user will be denied access, otherwise It depends on the state of their account:
+
+-   If it's a new account a link should be sent to that e-mail address. They click the link in their email to confirm they have a valid identity at the university that provisioned the email address. The link takes them back to the same UI to complete their account setup. Now they select an authentication provider which can be one that is commonly used by researchers, for example google, github, orcid or linkedin. Then they are asked to authenticate against that chosen provider. In the background, a link is created in the database between the .edu identity (email address) and the other identity (also an email address, for example a gmail address).
+-   If it is an existing account, the user would be directed to the preferred authentication provider right away  
+      
+    Once the authentication is successful all tabs are shown
 
 ### Tab 1: User Account Management
 
 **User Registration & Authentication:**
 
-- Users sign up with their university email address, enter .edu emil address -> next -> check if account already exists, prompt for auth option (password for external users, azure login for internal -> if account does not exist send link via email to setup new account or, if university is integrated redirect authentication to university)
-- Email verification required, email needs to e verified at regular intervals configured by administrator
-- some university email domains will be integrated via federation (for example oregonstate.edu). Needs to be configurable by admin 
-- 
-- Basic information collection:
-  - Full name
-  - Title/Position
-  - Role: staff / professional faculty or Faculty
-  - University and Department
+-   Users sign up with their university email address, they need to enter an address that ends with .edu -\> next -\> check if account already exists, prompt for auth option (password for external users, azure login for internal -\> if account does not exist send link via email to setup new account or, if university is integrated redirect authentication to university)
+-   Email verification required, email needs to e verified at regular intervals configured by administrator
+-   some university email domains will be integrated via federation (for example oregonstate.edu). Needs to be configurable by admin
+-   
+-   Basic information collection:
+    -   Full name
+    -   Title/Position
+    -   Role: staff / professional faculty or Faculty
+    -   University and Department
 
-**Linked Identity Management:**
-Users can link additional identities:
+**Linked Identity Management:** Users can link additional identities:
 
-1. **Google Account** - Not necessarily ending with university email domain, store email identity and underlying long int google id
-2. **GitHub Account** - For code repository integration, store the github user id as well as the unterlying long int github numeric id
-3. **ORCID Account** - For researcher identification
-4. **LinkedIN account** - For addional infornmation (required for users that do not have an .edu email address )
+1.  **Google Account** - Not necessarily ending with university email domain, store email identity and underlying long int google id
+2.  **GitHub Account** - For code repository integration, store the github user id as well as the unterlying long int github numeric id
+3.  **ORCID Account** - For researcher identification
+4.  **LinkedIN account** - For addional infornmation (required for users that do not have an .edu email address )
 
-Default billing information: for home university (e.g. oregonstate.edu) these need to be 2 fields: Default Index (billing account) and "Default Activity Code" or users will not be able to create woerk IDs 
+Default billing information: for home university (e.g. oregonstate.edu) these need to be 2 fields: Default Index (billing account) and "Default Activity Code" or users will not be able to create woerk IDs
 
 ### Tab 2: Resource Management
 
-#### Projects / Woerks 
+#### Projects / Woerks
 
 **Project Management System:**
 
-- Users can create new projects (called "woerks")
-- Projects displayed in a list view
+-   Users can create new projects (called "woerks")
+-   Projects displayed in a list view
 
 **Project Attributes:**
 
-- **Woerk ID**: randomly assinged 5-character alphanumeric identifier with hyphen as middle character (e.g., AB-12). The alphanumeric identifier must be glo
-- **Short Name**: Maximum 30 characters
-- **Description**: Maximum 1024 characters
+-   **Woerk ID**: randomly assinged 5-character alphanumeric identifier with hyphen as middle character (e.g., AB-12). The alphanumeric identifier must be glo
+-   **Short Name**: Maximum 30 characters
+-   **Description**: Maximum 1024 characters
 
 **Project Classification:**
 
-- **Non-grant Projects**: No additional metadata required
-- **U.S. Federal Projects**:
-  - Search interface connected to grants.gov API
-  - Multi-word search capability across all fields
-  - API endpoints:
-    - `https://www.grants.gov/api/common/search2`
-    - `https://www.grants.gov/api/common/fetchopportunity`
-  - Retrieved data stored locally:
-    - Project ID
-    - Funding agency
-    - API information
-    - Project description
-  
-#### Allocations 
+-   **Non-grant Projects**: No additional metadata required
+-   **U.S. Federal Projects**:
+    -   Search interface connected to grants.gov API
+    -   Multi-word search capability across all fields
+    -   API endpoints:
+        -   `https://www.grants.gov/api/common/search2`
+        -   `https://www.grants.gov/api/common/fetchopportunity`
+    -   Retrieved data stored locally:
+        -   Project ID
+        -   Funding agency
+        -   API information
+        -   Project description
+
+#### Allocations
 
 ### Tab 3: Authorization Management
 
 **Group Management:**
 
-- Integration with LDAPS and Grouper API
-  - See Grouper Rest API  
-  - https://software.internet2.edu/grouper/doc/master/grouper-ws-parent/grouper-ws/apidocs/edu/internet2/middleware/grouper/ws/rest/package-summary.html
-  - https://github.com/Internet2/grouper/tree/GROUPER_5_BRANCH/grouper-ws/grouper-ws/src/grouper-ws/edu/internet2/middleware/grouper/ws/rest
-- Groups assigned to specific projects
-- Features:
-  - Project selection dropdown
-  - List of all groups assigned to selected project
-  - Create new groups
-  - Manage group membership
+-   Integration with LDAPS and Grouper API
+    -   See Grouper Rest API
+    -   https://software.internet2.edu/grouper/doc/master/grouper-ws-parent/grouper-ws/apidocs/edu/internet2/middleware/grouper/ws/rest/package-summary.html
+    -   https://github.com/Internet2/grouper/tree/GROUPER_5_BRANCH/grouper-ws/grouper-ws/src/grouper-ws/edu/internet2/middleware/grouper/ws/rest
+-   Groups assigned to specific projects
+-   Features:
+    -   Project selection dropdown
+    -   List of all groups assigned to selected project
+    -   Create new groups
+    -   Manage group membership
 
 ### Tab 4: File Management
 
 **Web-based File Transfer Interface:**
 
-- Upload and download capabilities
-- Target folder selection via dropdown menu
-- Support for both:
-  - POSIX-based storage
-  - S3-based storage
+-   Upload and download capabilities
+-   Target folder selection via dropdown menu
+-   Support for both:
+    -   POSIX-based storage
+    -   S3-based storage
 
 ### Tab 5: Terminal Access
 
 **SSH Terminal Component:**
 
-- Based on xterm.js (https://xtermjs.org/)
-- Direct login to bastion SSH host
-- Authentication via secure SSH certificates
+-   Based on xterm.js (https://xtermjs.org/)
+-   Direct login to bastion SSH host
+-   Authentication via secure SSH certificates
 
 ## Technical Requirements
 
-- Multi-university support (approximately 12 institutions)
-- Secure authentication and authorization
-- Integration with external APIs (grants.gov, LDAPS/Grouper)
-- Web-based terminal emulation
-- Support for multiple storage backends
+-   Multi-university support (approximately 12 institutions)
+-   Secure authentication and authorization
+-   Integration with external APIs (grants.gov, LDAPS/Grouper)
+-   Web-based terminal emulation
+-   Support for multiple storage backends
 
 ### Tab 6: Github Access
 
-- by default empty tab unless users have linked their github account in Tab 1, point users to tab 1
-- searchable pull down field that allows you to either pick or enter a github https://url
+-   by default empty tab unless users have linked their github account in Tab 1, point users to tab 1
+-   searchable pull down field that allows you to either pick or enter a github https://url
 
 ## Technical Implementation Notes & Lessons Learned
 
 ### Port Configuration (CRITICAL)
-- **Development Ports**: Frontend 3021, Backend 3020
-- **Production Ports**: Frontend 3011, Backend 3010  
-- **Default Ports**: Frontend 3011, Backend 3010 (in .env files)
-- Always use different port ranges to avoid conflicts with common dev tools
+
+-   **Development Ports**: Frontend 3021, Backend 3020
+-   **Production Ports**: Frontend 3011, Backend 3010
+-   **Default Ports**: Frontend 3011, Backend 3010 (in .env files)
+-   Always use different port ranges to avoid conflicts with common dev tools
 
 ### Database Setup
-1. Create database: `sudo -u postgres psql -c "CREATE DATABASE woerk_db;"`
-2. Set postgres password: `sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"`
-3. Use connection string: `postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public`
-4. Run migrations: `npx prisma migrate dev --name init`
+
+1.  Create database: `sudo -u postgres psql -c "CREATE DATABASE woerk_db;"`
+2.  Set postgres password: `sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"`
+3.  Use connection string: `postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public`
+4.  Run migrations: `npx prisma migrate dev --name init`
 
 ### Next.js 15 + Tailwind CSS Issues & Solutions
+
 **CRITICAL**: Next.js 15 installs Tailwind CSS v4 (beta) by default which breaks standard utility classes.
 
 **Solution**:
-1. Uninstall Tailwind v4: `npm uninstall tailwindcss @tailwindcss/postcss`
-2. Install Tailwind v3: `npm install tailwindcss@3 autoprefixer postcss`
-3. Use standard PostCSS config:
+
+1.  Uninstall Tailwind v4: `npm uninstall tailwindcss @tailwindcss/postcss`
+2.  Install Tailwind v3: `npm install tailwindcss@3 autoprefixer postcss`
+3.  Use standard PostCSS config:
+
 ```js
 const config = {
   plugins: {
@@ -177,51 +196,60 @@ const config = {
 ```
 
 ### Authentication Issues
-- NextAuth v5 (beta) has compatibility issues with Next.js 15
-- For development, use simple credential-based auth or mock auth
-- OAuth providers require proper client IDs or will cause build failures
-- Use simplified auth route handlers for Next.js 15 compatibility
+
+-   NextAuth v5 (beta) has compatibility issues with Next.js 15
+-   For development, use simple credential-based auth or mock auth
+-   OAuth providers require proper client IDs or will cause build failures
+-   Use simplified auth route handlers for Next.js 15 compatibility
 
 ### xterm.js Integration
-- Must be dynamically imported client-side only to avoid SSR issues
-- Use `@xterm/xterm` and `@xterm/addon-fit` (not deprecated `xterm` package)
-- Wrap terminal initialization in `isClient` check
-- Use null checks for all xterm method calls
+
+-   Must be dynamically imported client-side only to avoid SSR issues
+-   Use `@xterm/xterm` and `@xterm/addon-fit` (not deprecated `xterm` package)
+-   Wrap terminal initialization in `isClient` check
+-   Use null checks for all xterm method calls
 
 ### TypeScript Configuration
-- Set `"strict": true` in tsconfig.json
-- Avoid `any` types - use proper interfaces
-- Use `React.forwardRef` with proper typing for components
-- Import React hooks with proper dependency arrays
+
+-   Set `"strict": true` in tsconfig.json
+-   Avoid `any` types - use proper interfaces
+-   Use `React.forwardRef` with proper typing for components
+-   Import React hooks with proper dependency arrays
 
 ### Build & Development Scripts
+
 Create these scripts for consistent development:
 
-**start-dev.sh**: Development with ports 3020/3021
-**start-prod.sh**: Production with ports 3010/3011  
+**start-dev.sh**: Development with ports 3020/3021 **start-prod.sh**: Production with ports 3010/3011  
 **restart.sh**: Kill processes and restart with updated code
 
 ### Component Library Pattern
+
 Use shadcn/ui pattern:
-- Components in `components/ui/` 
-- Page-specific components in `components/tabs/`
-- Shared utilities in `lib/utils.ts`
-- CSS variables in `globals.css` with proper HSL values
+
+-   Components in `components/ui/`
+-   Page-specific components in `components/tabs/`
+-   Shared utilities in `lib/utils.ts`
+-   CSS variables in `globals.css` with proper HSL values
 
 ### Database Schema Notes
-- Use `@map()` for snake_case database columns
-- Include NextAuth models (Account, Session, VerificationToken)
-- Create indexes for foreign keys and query performance
-- Use proper Prisma relations with cascade deletes
+
+-   Use `@map()` for snake_case database columns
+-   Include NextAuth models (Account, Session, VerificationToken)
+-   Create indexes for foreign keys and query performance
+-   Use proper Prisma relations with cascade deletes
 
 ### Prisma Setup
-- Backend: Standard Prisma setup with PrismaService
-- Frontend: Copy schema and run `npx prisma generate` for NextAuth
-- Both need same DATABASE_URL in .env files
-- Use global PrismaService module in NestJS
+
+-   Backend: Standard Prisma setup with PrismaService
+-   Frontend: Copy schema and run `npx prisma generate` for NextAuth
+-   Both need same DATABASE_URL in .env files
+-   Use global PrismaService module in NestJS
 
 ### Environment Variables
+
 Must set these for proper operation:
+
 ```bash
 # Backend (.env)
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/woerk_db?schema=public"
@@ -238,19 +266,22 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 ```
 
 ### Common Build Failures & Solutions
-1. **"@prisma/client did not initialize"**: Run `npx prisma generate` in both frontend and backend
-2. **"border-border unknown utility"**: Tailwind v4 incompatibility - downgrade to v3
-3. **"asChild not found"**: Use standard JSX patterns, not advanced component composition
-4. **"self is not defined"**: xterm.js SSR issue - use dynamic imports with client-side checks
-5. **Port conflicts**: Always kill existing processes before starting new ones
+
+1.  **"@prisma/client did not initialize"**: Run `npx prisma generate` in both frontend and backend
+2.  **"border-border unknown utility"**: Tailwind v4 incompatibility - downgrade to v3
+3.  **"asChild not found"**: Use standard JSX patterns, not advanced component composition
+4.  **"self is not defined"**: xterm.js SSR issue - use dynamic imports with client-side checks
+5.  **Port conflicts**: Always kill existing processes before starting new ones
 
 ### Testing Commands
-- Build frontend: `npm run build` (must succeed without CSS errors)
-- Test backend: `curl http://localhost:3010` should return "Hello World!"  
-- Test API docs: `curl http://localhost:3010/api` should return Swagger UI
-- Test database: `psql -U postgres -h localhost woerk_db -c "SELECT * FROM users LIMIT 1;"`
+
+-   Build frontend: `npm run build` (must succeed without CSS errors)
+-   Test backend: `curl http://localhost:3010` should return "Hello World!"
+-   Test API docs: `curl http://localhost:3010/api` should return Swagger UI
+-   Test database: `psql -U postgres -h localhost woerk_db -c "SELECT * FROM users LIMIT 1;"`
 
 ### Project Structure Created
+
 ```
 ├── backend/
 │   ├── src/
@@ -274,6 +305,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 ```
 
 ### Dependencies That Work Together
+
 ```json
 {
   "tailwindcss": "^3.4.17",
@@ -284,14 +316,14 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
   "@nestjs/platform-express": "^10.0.0"
 }
 ```
+
 Note: Avoid Fastify adapter - causes port binding issues. Use Express.
 
 ### Key Implementation Patterns
-- Tab-based SPA with Radix UI Tabs
-- Each tab is a separate component in `components/tabs/`
-- Use consistent Card/Button/Input UI components  
-- Client-side state management with React hooks
-- API calls to backend at `NEXT_PUBLIC_API_URL`
-- Woerk ID generation: 2 letters + hyphen + 2 alphanumeric (e.g., "AB-1C")
 
-
+-   Tab-based SPA with Radix UI Tabs
+-   Each tab is a separate component in `components/tabs/`
+-   Use consistent Card/Button/Input UI components
+-   Client-side state management with React hooks
+-   API calls to backend at `NEXT_PUBLIC_API_URL`
+-   Woerk ID generation: 2 letters + hyphen + 2 alphanumeric (e.g., "AB-1C")
