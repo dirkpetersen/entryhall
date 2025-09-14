@@ -56,7 +56,7 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
 
   const checkAccountExists = async (email: string): Promise<{ exists: boolean; user?: User }> => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-account`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/check-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -72,7 +72,7 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
 
   const sendVerificationEmail = async (email: string): Promise<void> => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-verification`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/send-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -85,7 +85,7 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
 
   const handleEmailVerification = async (token: string, email: string): Promise<void> => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-email`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, email })
@@ -155,7 +155,7 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
   const handleProviderSelect = async (provider: string): Promise<void> => {
     try {
       // Redirect to OAuth provider
-      const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/${provider}?email=${encodeURIComponent(authState.email)}`
+      const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}?email=${encodeURIComponent(authState.email)}`
       window.location.href = authUrl
     } catch (error) {
       console.error('Provider authentication failed:', error)

@@ -33,7 +33,7 @@ export default function AuthCallback() {
       }
 
       // Exchange code for tokens
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/callback`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

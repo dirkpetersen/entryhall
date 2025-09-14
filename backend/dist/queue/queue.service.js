@@ -51,15 +51,16 @@ let QueueService = QueueService_1 = class QueueService {
         }
     }
     async setupJobHandlers() {
-        await this.boss.work('send-email', async (jobs) => {
-            const job = Array.isArray(jobs) ? jobs[0] : jobs;
-            return this.handleEmailJob(job.data);
-        });
-        await this.boss.work('cleanup-jobs', async () => {
-            return this.handleCleanupJob();
-        });
-        await this.boss.schedule('cleanup-jobs', '0 2 * * *');
-        this.logger.log('Job handlers set up successfully');
+        try {
+            await this.boss.work('send-email', async (jobs) => {
+                const job = Array.isArray(jobs) ? jobs[0] : jobs;
+                return this.handleEmailJob(job.data);
+            });
+            this.logger.log('Email job handlers set up successfully');
+        }
+        catch (error) {
+            this.logger.error('Failed to set up job handlers', error);
+        }
     }
     async queueVerificationEmail(email, token) {
         const jobData = {

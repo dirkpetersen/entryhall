@@ -272,6 +272,8 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 3.  **"asChild not found"**: Use standard JSX patterns, not advanced component composition
 4.  **"self is not defined"**: xterm.js SSR issue - use dynamic imports with client-side checks
 5.  **Port conflicts**: Always kill existing processes before starting new ones
+6.  **"Queue cleanup-jobs not found"**: pg-boss scheduling issues on first setup - avoid scheduling jobs during initialization
+7.  **"DMARC policy of reject"**: Never send from university domains - use verified domains you control
 
 ### Testing Commands
 
