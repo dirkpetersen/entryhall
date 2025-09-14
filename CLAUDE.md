@@ -275,33 +275,87 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 
 ### Testing Commands
 
+**Application Testing**:
 -   Build frontend: `npm run build` (must succeed without CSS errors)
 -   Test backend: `curl http://localhost:3010` should return "Hello World!"
 -   Test API docs: `curl http://localhost:3010/api` should return Swagger UI
 -   Test database: `psql -U postgres -h localhost woerk_db -c "SELECT * FROM users LIMIT 1;"`
 
-### Project Structure Created
+**Email System Testing**:
+-   **Test any email**: `AWS_PROFILE=sendmail node backend/test-any-email.js test@university.edu`
+-   **Test DMARC-safe delivery**: `AWS_PROFILE=sendmail node backend/test-no-dmarc.js your@email.edu`
+-   **Check SES status**: `AWS_PROFILE=sendmail node backend/check-ses-status.js`
+-   **List verified emails**: `AWS_PROFILE=sendmail node backend/list-verified-emails.js`
+-   **Verify new email**: `AWS_PROFILE=sendmail node backend/verify-ses-email.js new@email.edu`
+
+**Authentication API Testing**:
+-   **Check account**: `curl -X POST http://localhost:3021/api/auth/check-account -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
+-   **Send verification**: `curl -X POST http://localhost:3021/api/auth/send-verification -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
+
+### Complete Project Structure Implemented
 
 ```
+entryhall/
+├── docs/                        # Comprehensive documentation
+│   ├── TECHNICAL.md            # Tech stack & compatibility
+│   ├── API-SPEC.md             # Complete API docs
+│   ├── SETUP.md                # Installation guide
+│   ├── WORKFLOWS.md            # Business logic & flows
+│   ├── REQUIRED.md             # Requirements & acceptance criteria
+│   └── DBMODEL.md              # Database schema & samples
+├── .env.default                # Complete env var reference
+├── CLAUDE.md                   # Quick reference (this file)
+├── README.md                   # Project overview
+├── start-dev.sh               # Development: PostgreSQL check + 3020/3021
+├── start-prod.sh              # Production: PostgreSQL check + 3010/3011
+├── restart.sh                 # Clean restart with PostgreSQL check
 ├── backend/
 │   ├── src/
-│   │   ├── auth/ (JWT auth with passport)
-│   │   ├── projects/ (CRUD operations)  
-│   │   ├── prisma/ (database service)
-│   │   └── main.ts (Fastify setup)
-│   └── prisma/schema.prisma
+│   │   ├── auth/              # Complete auth system
+│   │   │   ├── auth.controller.ts (all auth endpoints)
+│   │   │   ├── auth.service.ts (email verification logic)
+│   │   │   ├── auth.module.ts (with queue integration)
+│   │   │   ├── jwt.strategy.ts
+│   │   │   └── guards/
+│   │   ├── email/             # AWS SES email system
+│   │   │   ├── email.service.ts (SES + templates)
+│   │   │   └── email.module.ts
+│   │   ├── queue/             # Background job processing
+│   │   │   ├── queue.service.ts (pg-boss integration)
+│   │   │   └── queue.module.ts
+│   │   ├── projects/          # Project/Woerk management
+│   │   ├── prisma/            # Database service
+│   │   └── main.ts            # Express server setup
+│   ├── prisma/
+│   │   ├── schema.prisma      # Complete schema with auth models
+│   │   └── migrations/        # Email verification migration
+│   ├── test-*.js              # Comprehensive email testing suite
+│   └── .env                   # AWS profile configuration
 ├── frontend/
 │   ├── app/
-│   │   ├── api/auth/[...nextauth]/ (auth routes)
-│   │   └── page.tsx (main app)
+│   │   ├── auth/
+│   │   │   ├── callback/      # OAuth callback handler
+│   │   │   └── verify/        # Email verification handler
+│   │   ├── page.tsx           # Main app with auth-first logic
+│   │   └── layout.tsx
 │   ├── components/
-│   │   ├── ui/ (button, input, card, label)
-│   │   ├── tabs/ (user-account, resources, terminal, github)
-│   │   └── main-tabs.tsx
+│   │   ├── auth/              # Complete authentication flow
+│   │   │   ├── welcome-page.tsx (email entry + description)
+│   │   │   ├── account-setup.tsx (OAuth provider selection)  
+│   │   │   ├── email-verification.tsx (verification flow)
+│   │   │   └── auth-flow.tsx (orchestrates entire flow)
+│   │   ├── tabs/              # Application tabs (post-auth)
+│   │   │   ├── user-account-tab.tsx
+│   │   │   ├── resources-tab.tsx
+│   │   │   ├── terminal-tab.tsx
+│   │   │   └── github-tab.tsx
+│   │   ├── ui/                # Consistent UI components
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── input.tsx
+│   │   │   └── label.tsx
+│   │   └── main-tabs.tsx      # Main tabbed interface
 │   └── lib/utils.ts
-├── start-dev.sh (development: ports 3020/3021)
-├── start-prod.sh (production: ports 3010/3011)  
-└── restart.sh (kill and restart)
 ```
 
 ### Dependencies That Work Together
@@ -319,11 +373,134 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 
 Note: Avoid Fastify adapter - causes port binding issues. Use Express.
 
+### Email System Implementation & AWS SES Integration
+
+**CRITICAL EMAIL SETUP**:
+-   **AWS Profile Required**: Use `AWS_PROFILE=sendmail` (has AmazonSESFullAccess)
+-   **DMARC Compliance**: NEVER send from university domains you don't control
+-   **Verified Sender**: Use `oregonstate-arcs@osu.internetchen.de` (DMARC-safe)
+-   **Email Templates**: Professional HTML templates with university branding
+
+**Email Dependencies**:
+```json
+{
+  "@aws-sdk/client-ses": "latest",
+  "pg-boss": "latest", 
+  "@nestjs/config": "latest"
+}
+```
+
+**Backend Email Structure**:
+```
+├── src/email/
+│   ├── email.service.ts (AWS SES integration)
+│   └── email.module.ts
+├── src/queue/
+│   ├── queue.service.ts (pg-boss background jobs)
+│   └── queue.module.ts
+└── test-email scripts for debugging
+```
+
+**Environment Variables for Email**:
+```bash
+# Backend (.env)
+AWS_PROFILE="sendmail"
+AWS_REGION="us-west-2"  
+EMAIL_FROM="Woerk System <oregonstate-arcs@osu.internetchen.de>"
+FRONTEND_URL="http://localhost:3020"
+```
+
+**Email Testing Commands**:
+```bash
+# Test any email (auto-verifies if needed)
+AWS_PROFILE=sendmail node backend/test-any-email.js test@university.edu
+
+# Test DMARC-compliant delivery
+AWS_PROFILE=sendmail node backend/test-no-dmarc.js your@email.edu
+
+# Check verified SES identities
+AWS_PROFILE=sendmail node backend/list-verified-emails.js
+```
+
+**DMARC Issues & Solutions**:
+1.  **Problem**: University domains (e.g., oregonstate.edu) have strict DMARC policies
+2.  **Symptom**: "550 5.7.509 Access denied, DMARC policy of reject"
+3.  **Solution**: Use verified domain you control (osu.internetchen.de)
+4.  **Result**: Reliable delivery to all university email systems
+
+**Authentication Flow Implementation**:
+-   **Authentication-First UI**: No tabs visible until user is authenticated
+-   **Email Validation**: Strict .edu domain checking before proceeding
+-   **Professional Onboarding**: Clean welcome page → email entry → verification → OAuth setup
+-   **OAuth Provider Support**: Google, GitHub, ORCID, LinkedIn with proper state management
+
+**Database Updates for Authentication**:
+-   Added `verification_token` and `verification_token_expires` to User model
+-   Added `UserIdentity` model for OAuth provider linking  
+-   Added `email_verified` boolean flag
+-   Migration: `npx prisma migrate dev --name add_email_verification_system`
+
+**Startup Script Enhancements**:
+-   **PostgreSQL Auto-Start**: Scripts check `pg_isready` and auto-start via systemctl
+-   **AWS Profile Integration**: All scripts use `AWS_PROFILE=sendmail`
+-   **Error Handling**: Clear feedback for PostgreSQL and email service issues
+
 ### Key Implementation Patterns
 
--   Tab-based SPA with Radix UI Tabs
+-   **Authentication-First Architecture**: No application access without completed auth
+-   Tab-based SPA with Radix UI Tabs (post-authentication)
 -   Each tab is a separate component in `components/tabs/`
 -   Use consistent Card/Button/Input UI components
 -   Client-side state management with React hooks
 -   API calls to backend at `NEXT_PUBLIC_API_URL`
 -   Woerk ID generation: 2 letters + hyphen + 2 alphanumeric (e.g., "AB-1C")
+-   **Background Job Processing**: pg-boss for reliable email delivery
+-   **Professional Email Templates**: HTML emails with university branding
+
+### Production Deployment Checklist
+
+**Pre-Deployment Requirements**:
+1.  **PostgreSQL**: Ensure PostgreSQL 16.9+ is installed and running
+2.  **AWS SES**: Verify sender domain in SES console (avoid DMARC issues)
+3.  **Environment Variables**: Copy from `.env.default` and configure production values
+4.  **SSL Certificates**: Set up HTTPS for production frontend URLs
+5.  **Database Migration**: Run `npx prisma migrate deploy` on production database
+
+**Critical Production Settings**:
+```bash
+# Production Backend (.env)
+NODE_ENV="production"
+PORT=3011
+AWS_PROFILE="sendmail"
+EMAIL_FROM="Woerk System <noreply@your-verified-domain.edu>"
+FRONTEND_URL="https://woerk.your-university.edu"
+JWT_SECRET="generate-secure-production-secret"
+
+# Production Frontend (.env.production)
+NEXT_PUBLIC_API_URL="https://api.woerk.your-university.edu"
+```
+
+**Deployment Commands**:
+```bash
+# Backend
+cd backend && npm run build && PM2_RUNTIME=true pm2 start dist/main.js
+
+# Frontend  
+cd frontend && npm run build && npm start
+
+# With startup scripts
+./start-prod.sh  # Uses ports 3010/3011
+```
+
+**Email System Production Notes**:
+-   **NEVER use university domains** as senders without proper DMARC setup
+-   **Always use verified domains** you control (e.g., osu.internetchen.de)
+-   **Test email delivery** to all target university domains before launch
+-   **Monitor pg-boss queue** for failed email jobs
+-   **Set up email alerts** for system administrators
+
+**Monitoring & Health Checks**:
+-   **Application Health**: `curl http://localhost:3011/health`
+-   **Queue Health**: Check pg-boss admin interface
+-   **Email Delivery**: Monitor AWS SES sending statistics
+-   **Database**: Set up connection monitoring and backups
