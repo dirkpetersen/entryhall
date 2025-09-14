@@ -4,10 +4,10 @@ Quick reference guide for Claude Code when working with the Woerk application.
 
 ## Project Overview
 
-**Woerk** is a comprehensive resource management platform for university supercomputer facilities, providing:
+**Woerk** is a comprehensive resource management platform for AI supercomputer facilities, providing:
 - Self-service user and project management
 - Resource allocation and tracking
-- Multi-university federation support
+- Multi-university light federation support
 - Integration with research infrastructure (grants.gov, LDAP, GitHub)
 - Web-based terminal and file management
 
