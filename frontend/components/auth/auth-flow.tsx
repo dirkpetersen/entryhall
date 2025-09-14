@@ -155,7 +155,7 @@ export function AuthFlow({ onAuthComplete }: AuthFlowProps) {
   const handleProviderSelect = async (provider: string): Promise<void> => {
     try {
       // Redirect to OAuth provider
-      const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}?email=${encodeURIComponent(authState.email)}`
+      const authUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/oauth/${provider}?email=${encodeURIComponent(authState.email)}`
       window.location.href = authUrl
     } catch (error) {
       console.error('Provider authentication failed:', error)

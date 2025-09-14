@@ -13,12 +13,13 @@ export declare class AuthController {
     }): Promise<{
         message: string;
     }>;
-    verifyEmail(body: {
+    verifyEmailPost(body: {
         token: string;
         email: string;
     }): Promise<{
         message: string;
     }>;
+    verifyEmailGet(req: any): Promise<string>;
     oauthCallback(body: {
         code: string;
         state: string;
@@ -28,6 +29,9 @@ export declare class AuthController {
         user: any;
     }>;
     getProfile(req: any): Promise<any>;
+    initiateOAuth(req: any): Promise<{
+        url: string;
+    }>;
     login(req: any): Promise<{
         access_token: string;
         user: any;
@@ -40,8 +44,5 @@ export declare class AuthController {
     }): Promise<{
         access_token: string;
         user: any;
-    }>;
-    initiateOAuth(req: any): Promise<{
-        url: string;
     }>;
 }
