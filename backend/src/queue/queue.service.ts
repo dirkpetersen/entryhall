@@ -52,21 +52,22 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async setupJobHandlers() {
-    // Email sending jobs
-    await this.boss.work('send-email', async (jobs) => {
-      const job = Array.isArray(jobs) ? jobs[0] : jobs;
-      return this.handleEmailJob(job.data as EmailJob);
-    });
+    try {
+      // Email sending jobs
+      await this.boss.work('send-email', async (jobs) => {
+        const job = Array.isArray(jobs) ? jobs[0] : jobs;
+        return this.handleEmailJob(job.data as EmailJob);
+      });
 
-    // Cleanup old jobs (run daily)
-    await this.boss.work('cleanup-jobs', async () => {
-      return this.handleCleanupJob();
-    });
-
-    // Schedule cleanup job to run daily
-    await this.boss.schedule('cleanup-jobs', '0 2 * * *'); // 2 AM daily
-
-    this.logger.log('Job handlers set up successfully');
+      this.logger.log('Email job handlers set up successfully');
+      
+      // Note: Cleanup job scheduling removed to avoid pg-boss initialization issues
+      // Cleanup can be run manually or via separate admin process
+      
+    } catch (error) {
+      this.logger.error('Failed to set up job handlers', error);
+      // Don't throw - let the application start without the queue if needed
+    }
   }
 
   async queueVerificationEmail(email: string, token: string): Promise<string | null> {
