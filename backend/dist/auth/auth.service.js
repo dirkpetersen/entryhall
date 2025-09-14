@@ -48,6 +48,7 @@ const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../prisma/prisma.service");
 const queue_service_1 = require("../queue/queue.service");
+const email_service_1 = require("../email/email.service");
 const bcrypt = __importStar(require("bcrypt"));
 const crypto = __importStar(require("crypto"));
 let AuthService = class AuthService {
@@ -55,11 +56,13 @@ let AuthService = class AuthService {
     jwtService;
     configService;
     queueService;
-    constructor(prisma, jwtService, configService, queueService) {
+    emailService;
+    constructor(prisma, jwtService, configService, queueService, emailService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
         this.configService = configService;
         this.queueService = queueService;
+        this.emailService = emailService;
     }
     async validateUser(email, password) {
         const user = await this.prisma.user.findUnique({
@@ -154,7 +157,7 @@ let AuthService = class AuthService {
                     },
                 });
             }
-            await this.queueService.queueVerificationEmail(email, token);
+            await this.sendVerificationEmailDirect(email, token);
             return { message: 'Verification email sent successfully' };
         }
         catch (error) {
@@ -266,6 +269,18 @@ let AuthService = class AuthService {
     generateVerificationToken() {
         return crypto.randomBytes(32).toString('hex');
     }
+    async sendVerificationEmailDirect(email, token) {
+        try {
+            const success = await this.emailService.sendVerificationEmail(email, token);
+            if (!success) {
+                throw new Error('Failed to send verification email');
+            }
+        }
+        catch (error) {
+            console.error('Direct email sending failed:', error);
+            throw error;
+        }
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
@@ -273,6 +288,7 @@ exports.AuthService = AuthService = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
         config_1.ConfigService,
-        queue_service_1.QueueService])
+        queue_service_1.QueueService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

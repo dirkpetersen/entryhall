@@ -16,6 +16,7 @@ const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./jwt.strategy");
 const local_strategy_1 = require("./local.strategy");
 const queue_module_1 = require("../queue/queue.module");
+const email_module_1 = require("../email/email.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -33,6 +34,7 @@ exports.AuthModule = AuthModule = __decorate([
                 inject: [config_1.ConfigService],
             }),
             queue_module_1.QueueModule,
+            email_module_1.EmailModule,
         ],
         controllers: [auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, local_strategy_1.LocalStrategy],

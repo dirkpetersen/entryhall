@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -13,6 +14,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private queueService: QueueService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -129,8 +131,8 @@ export class AuthService {
         });
       }
 
-      // Queue verification email
-      await this.queueService.queueVerificationEmail(email, token);
+      // Send verification email directly (bypassing queue for now)
+      await this.sendVerificationEmailDirect(email, token);
 
       return { message: 'Verification email sent successfully' };
     } catch (error) {
@@ -274,5 +276,17 @@ export class AuthService {
 
   private generateVerificationToken(): string {
     return crypto.randomBytes(32).toString('hex');
+  }
+
+  private async sendVerificationEmailDirect(email: string, token: string): Promise<void> {
+    try {
+      const success = await this.emailService.sendVerificationEmail(email, token);
+      if (!success) {
+        throw new Error('Failed to send verification email');
+      }
+    } catch (error) {
+      console.error('Direct email sending failed:', error);
+      throw error;
+    }
   }
 }
