@@ -274,6 +274,9 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 5.  **Port conflicts**: Always kill existing processes before starting new ones
 6.  **"Queue cleanup-jobs not found"**: pg-boss scheduling issues on first setup - avoid scheduling jobs during initialization
 7.  **"DMARC policy of reject"**: Never send from university domains - use verified domains you control
+8.  **"Unsupported provider: verify"**: Route order matters - specific routes must come before wildcard routes (:provider)
+9.  **Wrong redirect port**: FRONTEND_URL must point to frontend port (3021), not backend port (3020)
+10. **pg-boss null job IDs**: Queue may not process jobs immediately - use direct email sending for critical flows
 
 ### Testing Commands
 
@@ -436,6 +439,22 @@ AWS_PROFILE=sendmail node backend/list-verified-emails.js
 -   **Professional Onboarding**: Clean welcome page → email entry → verification → OAuth setup
 -   **OAuth Provider Support**: Google, GitHub, ORCID, LinkedIn with proper state management
 
+**Complete Working Email Verification Flow**:
+1.  **Frontend**: User enters .edu email → API call to `/auth/send-verification`
+2.  **Backend**: Generates token, saves to database, sends email via AWS SES
+3.  **Email**: Professional HTML template with verification link to `/auth/verify?token=...&email=...`
+4.  **Verification**: GET route processes token, shows success page, auto-redirects to frontend
+5.  **Frontend**: Detects `?verified=true` parameter, shows OAuth provider selection
+6.  **Complete**: User authenticated and gains access to all application tabs
+
+**Critical Success Factors**:
+-   ✅ Route order: `@Get('verify')` before `@Get('oauth/:provider')`
+-   ✅ Direct email sending (bypasses pg-boss queue issues)
+-   ✅ DMARC-compliant sender domain (oregonstate-arcs@osu.internetchen.de)
+-   ✅ Correct frontend URL (port 3021, not 3020)
+-   ✅ AWS profile with SES permissions (AWS_PROFILE=sendmail)
+-   ✅ Professional HTML templates with university branding
+
 **Database Updates for Authentication**:
 -   Added `verification_token` and `verification_token_expires` to User model
 -   Added `UserIdentity` model for OAuth provider linking  
@@ -501,8 +520,78 @@ cd frontend && npm run build && npm start
 -   **Monitor pg-boss queue** for failed email jobs
 -   **Set up email alerts** for system administrators
 
+**Email Verification Routing (CRITICAL)**:
+-   **Route Order**: Specific routes (`@Get('verify')`) must come BEFORE wildcard routes (`@Get(':provider')`)
+-   **Backend Routing**: Use `/auth/verify` for email links, `/auth/oauth/:provider` for OAuth
+-   **Frontend URLs**: Ensure `FRONTEND_URL` points to frontend port (3021), not backend (3020)
+-   **Redirect Flow**: Email link → Backend verification → HTML success page → Frontend redirect
+-   **Direct Email**: Use direct email sending instead of queue for immediate delivery
+
+**Email Verification Implementation Pattern**:
+```typescript
+// WRONG - wildcard catches everything
+@Get(':provider')          // This catches /auth/verify
+@Get('verify')             // Never reached
+
+// CORRECT - specific routes first  
+@Get('verify')             // Handles email verification links
+@Get('oauth/:provider')    // Handles OAuth provider initiation
+```
+
+**Environment Configuration**:
+```bash
+# Backend (.env) - CRITICAL for email verification
+FRONTEND_URL="http://localhost:3021"  # Must be frontend port!
+AWS_PROFILE="sendmail"                 # Profile with SES permissions
+EMAIL_FROM="Woerk System <your-verified-domain@yourdomain.edu>"
+```
+
 **Monitoring & Health Checks**:
 -   **Application Health**: `curl http://localhost:3011/health`
 -   **Queue Health**: Check pg-boss admin interface
 -   **Email Delivery**: Monitor AWS SES sending statistics
 -   **Database**: Set up connection monitoring and backups
+
+### Email Verification Troubleshooting
+
+**Common Issues & Solutions**:
+
+1.  **"Hello World!" instead of frontend**:
+    -   **Cause**: `FRONTEND_URL` points to backend port (3020) instead of frontend (3021)
+    -   **Fix**: Set `FRONTEND_URL="http://localhost:3021"` in backend/.env
+
+2.  **"Unsupported provider: verify"**:
+    -   **Cause**: Wildcard route `@Get(':provider')` catches `/auth/verify` before specific route
+    -   **Fix**: Move `@Get('verify')` route BEFORE `@Get('oauth/:provider')` in controller
+
+3.  **Email not received**:
+    -   **Check**: Backend logs for "Email sent successfully" message
+    -   **Check**: AWS SES sending statistics in console
+    -   **Check**: SPAM/junk folders (especially for non-.edu senders)
+    -   **Fix**: Ensure sender domain is verified in SES and DMARC-compliant
+
+4.  **"Job ID: null" in logs**:
+    -   **Cause**: pg-boss queue not processing jobs properly
+    -   **Fix**: Use direct email sending instead of queuing for critical paths
+    -   **Workaround**: Implement `sendVerificationEmailDirect()` method
+
+5.  **DMARC policy rejection**:
+    -   **Cause**: Trying to send from university domain without DMARC authorization
+    -   **Symptom**: "550 5.7.509 Access denied, DMARC policy of reject"
+    -   **Fix**: Use verified domain you control (e.g., oregonstate-arcs@osu.internetchen.de)
+
+**Email Testing Workflow**:
+```bash
+# 1. Test AWS SES access
+AWS_PROFILE=sendmail node backend/check-ses-status.js
+
+# 2. Test email delivery
+AWS_PROFILE=sendmail node backend/test-any-email.js test@university.edu
+
+# 3. Test verification endpoint
+curl http://localhost:3020/auth/send-verification \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@oregonstate.edu"}'
+
+# 4. Check backend logs for email delivery confirmation
+```
