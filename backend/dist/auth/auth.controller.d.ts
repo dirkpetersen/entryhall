@@ -2,6 +2,32 @@ import { AuthService } from './auth.service';
 export declare class AuthController {
     private authService;
     constructor(authService: AuthService);
+    checkAccount(body: {
+        email: string;
+    }): Promise<{
+        exists: boolean;
+        user?: any;
+    }>;
+    sendVerification(body: {
+        email: string;
+    }): Promise<{
+        message: string;
+    }>;
+    verifyEmail(body: {
+        token: string;
+        email: string;
+    }): Promise<{
+        message: string;
+    }>;
+    oauthCallback(body: {
+        code: string;
+        state: string;
+        provider: string;
+    }): Promise<{
+        token: string;
+        user: any;
+    }>;
+    getProfile(req: any): Promise<any>;
     login(req: any): Promise<{
         access_token: string;
         user: any;
@@ -15,5 +41,7 @@ export declare class AuthController {
         access_token: string;
         user: any;
     }>;
-    getProfile(req: any): any;
+    initiateOAuth(req: any): Promise<{
+        url: string;
+    }>;
 }

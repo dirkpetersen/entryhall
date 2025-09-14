@@ -4,19 +4,25 @@ export declare class ProjectsController {
     constructor(projectsService: ProjectsService);
     create(req: any, createProjectDto: any): Promise<{
         piOwner: {
+            verificationToken: string | null;
             id: number;
             username: string;
             email: string;
             fullName: string;
-            emailVerified: Date | null;
+            firstName: string | null;
+            lastName: string | null;
+            emailVerified: boolean;
             passwordHash: string | null;
             title: string | null;
             position: string | null;
-            role: import("@prisma/client").$Enums.UserRole | null;
+            role: import("@prisma/client").$Enums.UserRole;
             university: string | null;
             department: string | null;
             defaultIndex: string | null;
             defaultActivityCode: string | null;
+            verificationTokenExpires: Date | null;
+            passwordResetToken: string | null;
+            passwordResetTokenExpires: Date | null;
             createdAt: Date;
             updatedAt: Date;
             defaultProjectId: number | null;
@@ -46,27 +52,33 @@ export declare class ProjectsController {
     }>;
     findAll(req: any): Promise<({
         piOwner: {
+            verificationToken: string | null;
             id: number;
             username: string;
             email: string;
             fullName: string;
-            emailVerified: Date | null;
+            firstName: string | null;
+            lastName: string | null;
+            emailVerified: boolean;
             passwordHash: string | null;
             title: string | null;
             position: string | null;
-            role: import("@prisma/client").$Enums.UserRole | null;
+            role: import("@prisma/client").$Enums.UserRole;
             university: string | null;
             department: string | null;
             defaultIndex: string | null;
             defaultActivityCode: string | null;
+            verificationTokenExpires: Date | null;
+            passwordResetToken: string | null;
+            passwordResetTokenExpires: Date | null;
             createdAt: Date;
             updatedAt: Date;
             defaultProjectId: number | null;
         };
         allocations: ({
             resourceType: {
-                id: number;
                 name: string;
+                id: number;
                 unit: string;
                 isStorageType: boolean;
             };
@@ -95,9 +107,9 @@ export declare class ProjectsController {
     })[]>;
     findOne(id: string): Promise<({
         dataShares: {
+            name: string;
             id: number;
             createdAt: Date;
-            name: string;
             projectId: number;
             sourceAllocationId: number;
             storageSubtype: import("@prisma/client").$Enums.StorageSubtype;
@@ -105,27 +117,33 @@ export declare class ProjectsController {
             securityGroupId: number;
         }[];
         piOwner: {
+            verificationToken: string | null;
             id: number;
             username: string;
             email: string;
             fullName: string;
-            emailVerified: Date | null;
+            firstName: string | null;
+            lastName: string | null;
+            emailVerified: boolean;
             passwordHash: string | null;
             title: string | null;
             position: string | null;
-            role: import("@prisma/client").$Enums.UserRole | null;
+            role: import("@prisma/client").$Enums.UserRole;
             university: string | null;
             department: string | null;
             defaultIndex: string | null;
             defaultActivityCode: string | null;
+            verificationTokenExpires: Date | null;
+            passwordResetToken: string | null;
+            passwordResetTokenExpires: Date | null;
             createdAt: Date;
             updatedAt: Date;
             defaultProjectId: number | null;
         };
         allocations: ({
             resourceType: {
-                id: number;
                 name: string;
+                id: number;
                 unit: string;
                 isStorageType: boolean;
             };
@@ -140,26 +158,32 @@ export declare class ProjectsController {
         })[];
         resourceManagers: ({
             user: {
+                verificationToken: string | null;
                 id: number;
                 username: string;
                 email: string;
                 fullName: string;
-                emailVerified: Date | null;
+                firstName: string | null;
+                lastName: string | null;
+                emailVerified: boolean;
                 passwordHash: string | null;
                 title: string | null;
                 position: string | null;
-                role: import("@prisma/client").$Enums.UserRole | null;
+                role: import("@prisma/client").$Enums.UserRole;
                 university: string | null;
                 department: string | null;
                 defaultIndex: string | null;
                 defaultActivityCode: string | null;
+                verificationTokenExpires: Date | null;
+                passwordResetToken: string | null;
+                passwordResetTokenExpires: Date | null;
                 createdAt: Date;
                 updatedAt: Date;
                 defaultProjectId: number | null;
             };
         } & {
-            projectId: number;
             userId: number;
+            projectId: number;
         })[];
     } & {
         id: number;

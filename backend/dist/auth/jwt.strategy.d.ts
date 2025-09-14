@@ -7,19 +7,25 @@ export declare class JwtStrategy extends JwtStrategy_base {
     private prisma;
     constructor(prisma: PrismaService);
     validate(payload: any): Promise<{
+        verificationToken: string | null;
         id: number;
         username: string;
         email: string;
         fullName: string;
-        emailVerified: Date | null;
+        firstName: string | null;
+        lastName: string | null;
+        emailVerified: boolean;
         passwordHash: string | null;
         title: string | null;
         position: string | null;
-        role: import("@prisma/client").$Enums.UserRole | null;
+        role: import("@prisma/client").$Enums.UserRole;
         university: string | null;
         department: string | null;
         defaultIndex: string | null;
         defaultActivityCode: string | null;
+        verificationTokenExpires: Date | null;
+        passwordResetToken: string | null;
+        passwordResetTokenExpires: Date | null;
         createdAt: Date;
         updatedAt: Date;
         defaultProjectId: number | null;

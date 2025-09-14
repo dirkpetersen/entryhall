@@ -45,14 +45,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
+const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../prisma/prisma.service");
+const queue_service_1 = require("../queue/queue.service");
 const bcrypt = __importStar(require("bcrypt"));
+const crypto = __importStar(require("crypto"));
 let AuthService = class AuthService {
     prisma;
     jwtService;
-    constructor(prisma, jwtService) {
+    configService;
+    queueService;
+    constructor(prisma, jwtService, configService, queueService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
+        this.configService = configService;
+        this.queueService = queueService;
     }
     async validateUser(email, password) {
         const user = await this.prisma.user.findUnique({
@@ -92,11 +99,180 @@ let AuthService = class AuthService {
             throw new common_1.UnauthorizedException('Registration failed');
         }
     }
+    async checkAccountExists(email) {
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                emailVerified: true,
+                fullName: true,
+                role: true,
+                createdAt: true,
+            },
+        });
+        if (user) {
+            const identityCount = await this.prisma.userIdentity.count({
+                where: { userId: user.id },
+            });
+            return {
+                exists: true,
+                user: {
+                    ...user,
+                    hasLinkedProvider: identityCount > 0,
+                },
+            };
+        }
+        return { exists: false };
+    }
+    async sendVerificationEmail(email) {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        try {
+            const existingUser = await this.prisma.user.findUnique({
+                where: { email },
+            });
+            if (existingUser) {
+                await this.prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: {
+                        verificationToken: token,
+                        verificationTokenExpires: expiresAt,
+                    },
+                });
+            }
+            else {
+                await this.prisma.user.create({
+                    data: {
+                        email,
+                        username: email.split('@')[0],
+                        fullName: '',
+                        role: 'staff',
+                        emailVerified: false,
+                        verificationToken: token,
+                        verificationTokenExpires: expiresAt,
+                    },
+                });
+            }
+            await this.queueService.queueVerificationEmail(email, token);
+            return { message: 'Verification email sent successfully' };
+        }
+        catch (error) {
+            console.error('Error sending verification email:', error);
+            throw new common_1.BadRequestException('Failed to send verification email');
+        }
+    }
+    async verifyEmail(token, email) {
+        const user = await this.prisma.user.findFirst({
+            where: {
+                email,
+                verificationToken: token,
+                verificationTokenExpires: {
+                    gt: new Date(),
+                },
+            },
+        });
+        if (!user) {
+            throw new common_1.BadRequestException('Invalid or expired verification token');
+        }
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerified: true,
+                verificationToken: null,
+                verificationTokenExpires: null,
+            },
+        });
+        return { message: 'Email verified successfully' };
+    }
+    async getUserProfile(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                emailVerified: true,
+                fullName: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                title: true,
+                department: true,
+                university: true,
+                createdAt: true,
+            },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const identityCount = await this.prisma.userIdentity.count({
+            where: { userId: userId },
+        });
+        return {
+            ...user,
+            hasLinkedProvider: identityCount > 0,
+        };
+    }
+    async getOAuthUrl(provider, email) {
+        const state = crypto.randomBytes(32).toString('hex');
+        let oauthUrl = '';
+        const redirectUri = `${this.configService.get('FRONTEND_URL', 'http://localhost:3020')}/auth/callback`;
+        switch (provider) {
+            case 'google':
+                const googleClientId = this.configService.get('GOOGLE_CLIENT_ID');
+                oauthUrl = `https://accounts.google.com/o/oauth2/auth?` +
+                    `client_id=${googleClientId}&` +
+                    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                    `scope=openid email profile&` +
+                    `response_type=code&` +
+                    `state=${state}`;
+                break;
+            case 'github':
+                const githubClientId = this.configService.get('GITHUB_CLIENT_ID');
+                oauthUrl = `https://github.com/login/oauth/authorize?` +
+                    `client_id=${githubClientId}&` +
+                    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                    `scope=user:email&` +
+                    `state=${state}`;
+                break;
+            case 'orcid':
+                const orcidClientId = this.configService.get('ORCID_CLIENT_ID');
+                const orcidEnvironment = this.configService.get('ORCID_ENVIRONMENT', 'sandbox');
+                const orcidDomain = orcidEnvironment === 'production' ? 'orcid.org' : 'sandbox.orcid.org';
+                oauthUrl = `https://${orcidDomain}/oauth/authorize?` +
+                    `client_id=${orcidClientId}&` +
+                    `response_type=code&` +
+                    `scope=/authenticate&` +
+                    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                    `state=${state}`;
+                break;
+            case 'linkedin':
+                const linkedinClientId = this.configService.get('LINKEDIN_CLIENT_ID');
+                oauthUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
+                    `response_type=code&` +
+                    `client_id=${linkedinClientId}&` +
+                    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                    `scope=r_liteprofile r_emailaddress&` +
+                    `state=${state}`;
+                break;
+            default:
+                throw new common_1.BadRequestException(`Unsupported OAuth provider: ${provider}`);
+        }
+        return { url: oauthUrl };
+    }
+    async handleOAuthCallback(code, state, provider) {
+        throw new common_1.BadRequestException('OAuth callback not yet implemented');
+    }
+    generateVerificationToken() {
+        return crypto.randomBytes(32).toString('hex');
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        config_1.ConfigService,
+        queue_service_1.QueueService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
