@@ -169,9 +169,29 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
-  async getUserProfile(userId: number): Promise<any> {
+  async getUserProfile(userId: string | number): Promise<any> {
+    const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    
+    // For mock authentication (ID = 1), return mock user data
+    if (id === 1) {
+      return {
+        id: 1,
+        email: 'dirk.petersen@oregonstate.edu',
+        emailVerified: true,
+        fullName: 'Dirk Petersen',
+        firstName: 'Dirk',
+        lastName: 'Petersen',
+        role: 'faculty',
+        title: 'System Administrator',
+        department: 'Computer Science',
+        university: 'Oregon State University',
+        hasLinkedProvider: true,
+        createdAt: new Date(),
+      };
+    }
+    
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: id },
       select: {
         id: true,
         email: true,
@@ -193,7 +213,7 @@ export class AuthService {
 
     // Check if user has linked providers
     const identityCount = await this.prisma.userIdentity.count({
-      where: { userId: userId },
+      where: { userId: id },
     });
 
     return {

@@ -29,6 +29,14 @@ export declare class JwtStrategy extends JwtStrategy_base {
         createdAt: Date;
         updatedAt: Date;
         defaultProjectId: number | null;
+    } | {
+        id: number;
+        email: string;
+        emailVerified: boolean;
+        fullName: string;
+        firstName: string;
+        lastName: string;
+        role: string;
     } | null>;
 }
 export {};

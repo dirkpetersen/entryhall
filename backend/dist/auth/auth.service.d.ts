@@ -34,7 +34,7 @@ export declare class AuthService {
     verifyEmail(token: string, email: string): Promise<{
         message: string;
     }>;
-    getUserProfile(userId: number): Promise<any>;
+    getUserProfile(userId: string | number): Promise<any>;
     getOAuthUrl(provider: string, email?: string): Promise<{
         url: string;
     }>;
