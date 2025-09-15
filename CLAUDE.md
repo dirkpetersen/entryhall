@@ -294,8 +294,10 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3010
 -   **Verify new email**: `AWS_PROFILE=sendmail node backend/verify-ses-email.js new@email.edu`
 
 **Authentication API Testing**:
--   **Check account**: `curl -X POST http://localhost:3021/api/auth/check-account -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
--   **Send verification**: `curl -X POST http://localhost:3021/api/auth/send-verification -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
+-   **Check account**: `curl -X POST http://localhost:3020/auth/check-account -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
+-   **Send verification**: `curl -X POST http://localhost:3020/auth/send-verification -H "Content-Type: application/json" -d '{"email":"test@oregonstate.edu"}'`
+-   **Test OAuth URL**: `curl "http://localhost:3020/auth/oauth/google?email=test@oregonstate.edu"`
+-   **Test OAuth callback**: `curl -X POST http://localhost:3020/auth/callback -H "Content-Type: application/json" -d '{"code":"test","state":"test","provider":"google"}'`
 
 ### Complete Project Structure Implemented
 
@@ -440,12 +442,13 @@ AWS_PROFILE=sendmail node backend/list-verified-emails.js
 -   **OAuth Provider Support**: Google, GitHub, ORCID, LinkedIn with proper state management
 
 **Complete Working Email Verification Flow**:
-1.  **Frontend**: User enters .edu email → API call to `/auth/send-verification`
+1.  **Frontend**: User enters .edu email → Saved to cookie → API call to `/auth/send-verification`
 2.  **Backend**: Generates token, saves to database, sends email via AWS SES
 3.  **Email**: Professional HTML template with verification link to `/auth/verify?token=...&email=...`
 4.  **Verification**: GET route processes token, shows success page, auto-redirects to frontend
 5.  **Frontend**: Detects `?verified=true` parameter, shows OAuth provider selection
-6.  **Complete**: User authenticated and gains access to all application tabs
+6.  **OAuth Flow**: Frontend fetches OAuth URL from backend → Redirects to provider → Callback processed
+7.  **Complete**: JWT token stored, user authenticated and gains access to all application tabs
 
 **Critical Success Factors**:
 -   ✅ Route order: `@Get('verify')` before `@Get('oauth/:provider')`
@@ -454,6 +457,8 @@ AWS_PROFILE=sendmail node backend/list-verified-emails.js
 -   ✅ Correct frontend URL (port 3021, not 3020)
 -   ✅ AWS profile with SES permissions (AWS_PROFILE=sendmail)
 -   ✅ Professional HTML templates with university branding
+-   ✅ Email remembering via secure cookie storage (30-day expiry)
+-   ✅ OAuth callback processing with JWT token generation
 
 **Database Updates for Authentication**:
 -   Added `verification_token` and `verification_token_expires` to User model
@@ -465,6 +470,13 @@ AWS_PROFILE=sendmail node backend/list-verified-emails.js
 -   **PostgreSQL Auto-Start**: Scripts check `pg_isready` and auto-start via systemctl
 -   **AWS Profile Integration**: All scripts use `AWS_PROFILE=sendmail`
 -   **Error Handling**: Clear feedback for PostgreSQL and email service issues
+
+**User Experience Enhancements**:
+-   **Email Remembering**: Base64-encoded cookie storage for .edu emails (30-day expiry)
+-   **Visual Feedback**: Green highlight and checkmark for pre-filled emails
+-   **Clean UI**: No clutter - typing different email automatically clears highlighting
+-   **OAuth Flow**: Seamless provider selection → authentication → token storage
+-   **Auto-redirect**: Smooth transitions between verification, OAuth, and app access
 
 ### Key Implementation Patterns
 
@@ -544,6 +556,42 @@ cd frontend && npm run build && npm start
 FRONTEND_URL="http://localhost:3021"  # Must be frontend port!
 AWS_PROFILE="sendmail"                 # Profile with SES permissions
 EMAIL_FROM="Woerk System <your-verified-domain@yourdomain.edu>"
+GOOGLE_CLIENT_ID="your-client-id.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+
+**Email Remembering Implementation**:
+```typescript
+// Cookie utilities in WelcomePage component
+const saveEmailToCookie = (email: string): void => {
+  const encodedEmail = btoa(email) // Base64 encode
+  const expiryDate = new Date()
+  expiryDate.setTime(expiryDate.getTime() + (30 * 24 * 60 * 60 * 1000))
+  document.cookie = `woerk-email=${encodedEmail};expires=${expiryDate.toUTCString()};path=/;SameSite=Lax`
+}
+
+const getSavedEmail = (): string | null => {
+  const cookies = document.cookie.split(';')
+  const emailCookie = cookies.find(cookie => cookie.trim().startsWith('woerk-email='))
+  return emailCookie ? atob(emailCookie.split('=')[1]) : null
+}
+```
+
+**OAuth Flow Implementation**:
+```typescript
+// Frontend OAuth handling
+const handleProviderSelect = async (provider: string) => {
+  const response = await fetch(`/auth/oauth/${provider}?email=${email}`)
+  const data = await response.json()
+  if (data.url) {
+    window.location.href = data.url // Redirect to OAuth provider
+  }
+}
+
+// Backend OAuth callback (mock for testing)
+const mockUser = { id: '1', email: 'user@edu', emailVerified: true }
+const jwtToken = this.jwtService.sign({ email: mockUser.email, sub: mockUser.id })
+return { token: jwtToken, user: mockUser }
 ```
 
 **Monitoring & Health Checks**:
@@ -579,6 +627,21 @@ EMAIL_FROM="Woerk System <your-verified-domain@yourdomain.edu>"
     -   **Cause**: Trying to send from university domain without DMARC authorization
     -   **Symptom**: "550 5.7.509 Access denied, DMARC policy of reject"
     -   **Fix**: Use verified domain you control (e.g., oregonstate-arcs@osu.internetchen.de)
+
+6.  **OAuth "client_id=undefined"**:
+    -   **Cause**: Missing Google OAuth credentials in backend environment
+    -   **Symptom**: OAuth URL contains `client_id=undefined`
+    -   **Fix**: Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to backend/.env
+
+7.  **OAuth callback "Missing parameters"**:
+    -   **Cause**: Frontend callback expects provider parameter not in OAuth return URL
+    -   **Fix**: Default to 'google' or store provider in OAuth state parameter
+    -   **Frontend**: Fetch OAuth URL from backend then redirect (don't direct link)
+
+8.  **Email not remembered**:
+    -   **Cause**: Cookie not being set or retrieved properly
+    -   **Fix**: Use Base64 encoding, 30-day expiry, SameSite=Lax
+    -   **Visual**: Green highlight indicates remembered email working correctly
 
 **Email Testing Workflow**:
 ```bash
