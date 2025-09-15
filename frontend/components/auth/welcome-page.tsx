@@ -154,32 +154,13 @@ export function WelcomePage({ onEmailSubmit }: WelcomePageProps) {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading || !email}
-                >
-                  {isLoading ? 'Checking...' : 'Next'}
-                </Button>
-                
-                {isEmailPreFilled && (
-                  <Button 
-                    type="button"
-                    variant="ghost" 
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      setEmail('')
-                      setIsEmailPreFilled(false)
-                      // Clear the cookie
-                      document.cookie = 'woerk-email=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'
-                    }}
-                  >
-                    Use Different Email Address
-                  </Button>
-                )}
-              </div>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !email}
+              >
+                {isLoading ? 'Checking...' : 'Next'}
+              </Button>
             </form>
 
             {/* Additional Info */}
