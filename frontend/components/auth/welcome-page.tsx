@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,10 +13,52 @@ export function WelcomePage({ onEmailSubmit }: WelcomePageProps) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isEmailPreFilled, setIsEmailPreFilled] = useState(false)
+
+  // Load saved email from cookie on component mount
+  useEffect(() => {
+    const savedEmail = getSavedEmail()
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setIsEmailPreFilled(true)
+    }
+  }, [])
 
   const validateEduEmail = (email: string): boolean => {
     const eduRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu$/
     return eduRegex.test(email)
+  }
+
+  // Cookie utility functions
+  const saveEmailToCookie = (email: string): void => {
+    try {
+      // Encode the email and store in cookie for 30 days
+      const encodedEmail = btoa(email) // Base64 encode
+      const expiryDate = new Date()
+      expiryDate.setTime(expiryDate.getTime() + (30 * 24 * 60 * 60 * 1000)) // 30 days
+      document.cookie = `woerk-email=${encodedEmail};expires=${expiryDate.toUTCString()};path=/;SameSite=Lax`
+    } catch (error) {
+      console.error('Failed to save email to cookie:', error)
+    }
+  }
+
+  const getSavedEmail = (): string | null => {
+    try {
+      if (typeof document === 'undefined') return null // SSR safety
+      
+      const cookies = document.cookie.split(';')
+      const emailCookie = cookies.find(cookie => cookie.trim().startsWith('woerk-email='))
+      
+      if (emailCookie) {
+        const encodedEmail = emailCookie.split('=')[1]
+        return atob(encodedEmail) // Base64 decode
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Failed to read saved email:', error)
+      return null
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +74,9 @@ export function WelcomePage({ onEmailSubmit }: WelcomePageProps) {
     }
 
     try {
+      // Save valid email to cookie for future visits
+      saveEmailToCookie(email)
+      
       // Pass email to parent component for further processing
       await onEmailSubmit(email)
     } catch (error) {
@@ -86,26 +131,55 @@ export function WelcomePage({ onEmailSubmit }: WelcomePageProps) {
                   type="email"
                   placeholder="your.name@university.edu"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (isEmailPreFilled) {
+                      setIsEmailPreFilled(false) // Remove highlight when user starts typing
+                    }
+                  }}
                   disabled={isLoading}
-                  className={error ? 'border-red-500' : ''}
+                  className={`${error ? 'border-red-500' : ''} ${isEmailPreFilled ? 'border-green-500 bg-green-50' : ''}`}
                   required
                 />
                 {error && (
                   <p className="text-sm text-red-600">{error}</p>
+                )}
+                {isEmailPreFilled && !error && (
+                  <p className="text-sm text-green-600">
+                    ✓ Email remembered from previous visit
+                  </p>
                 )}
                 <p className="text-xs text-gray-500">
                   Only university email addresses (.edu) are accepted
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading || !email}
-              >
-                {isLoading ? 'Checking...' : 'Next'}
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading || !email}
+                >
+                  {isLoading ? 'Checking...' : 'Next'}
+                </Button>
+                
+                {isEmailPreFilled && (
+                  <Button 
+                    type="button"
+                    variant="ghost" 
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setEmail('')
+                      setIsEmailPreFilled(false)
+                      // Clear the cookie
+                      document.cookie = 'woerk-email=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'
+                    }}
+                  >
+                    Use Different Email Address
+                  </Button>
+                )}
+              </div>
             </form>
 
             {/* Additional Info */}
