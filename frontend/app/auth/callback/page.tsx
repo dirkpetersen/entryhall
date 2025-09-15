@@ -18,7 +18,8 @@ export default function AuthCallback() {
       const code = searchParams.get('code')
       const state = searchParams.get('state')
       const error = searchParams.get('error')
-      const provider = searchParams.get('provider')
+      // The provider isn't in the URL - we need to determine it from state or default to google
+      const provider = 'google' // For now, assume Google since we only have Google configured
 
       if (error) {
         setError(`Authentication failed: ${error}`)
@@ -26,8 +27,8 @@ export default function AuthCallback() {
         return
       }
 
-      if (!code || !state || !provider) {
-        setError('Missing required authentication parameters')
+      if (!code || !state) {
+        setError('Missing required authentication parameters (code or state)')
         setStatus('error')
         return
       }

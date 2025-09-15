@@ -42,6 +42,7 @@ export declare class AuthService {
         token: string;
         user: any;
     }>;
+    private handleGoogleCallback;
     private generateVerificationToken;
     private sendVerificationEmailDirect;
 }
